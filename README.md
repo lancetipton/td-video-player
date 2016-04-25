@@ -51,6 +51,7 @@ ytPlayer.queVideo({
 
 ```
 
+### Will add more info soon
 
 
 
