@@ -4,9 +4,6 @@ I know there are plenty of great plugins out there that already to the same thin
 
 TD YouTube player library:
 
-Requiers the TDPluginLoader library.
-
-
 First create a new TDYPlayer object. Then call the init function and pass in the id of the element you want the YouTube player attatched to, as well as an object that contains the youtube player settings.
 
 ```
