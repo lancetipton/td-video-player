@@ -1,6 +1,11 @@
 
 # TD Video player library:
+Vanilla Javascript Video-Player library for Youtube and Vimeo. Should be simple and quick to use. Does not require any other libs.
 
+1. Just add the script to your project
+2. In a script tag, or it's own js file create a new VideoPlayer object and call the init function();
+3. Pass your options and a callback function for when it's done loading
+4. Profit
 
 ### To use:
 Simple:
@@ -17,7 +22,11 @@ var videoId = vidWrapper.attr("data-video-id");
 var videoType =  vidWrapper.attr("data-video-type");
 
 // Create an new video player:
-new vp().init();
+new VideoPlayer().init({options: {
+	type: vimeo|youtube,
+	video_id : videoId,
+	iframe_id: 'video-iframe-' + videoId, 
+}});
 ```
 The init function takes two arguments, an object that holds an options object, and a callback funtion when the video player has been built. Here is an example of how it works:
 Notice: { options: { ...put options here... } }
@@ -35,7 +44,7 @@ var videoId = vidWrapper.attr("data-video-id");
 var videoType =  vidWrapper.attr("data-video-type");
 
 // Create an new video player:
-new vp().init({
+new VideoPlayer().init({
 	options: {
 		parent: vidWrapper, 
 		type: videoType,
@@ -91,7 +100,7 @@ var options = {
 	},
 };
 
-new vp().init({options: options});
+new VideoPlayer().init({options: options});
 
 // When player is ready callback:
 function onReady(){
