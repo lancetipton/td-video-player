@@ -1,4 +1,4 @@
-	var video_player = function(){
+	var VideoPlayer = function(){
 		var youtubeApiScript = "//www.youtube.com/iframe_api";
 		var youtubeUrl = '//www.youtube.com/embed/';
 		var vimeoApiScript = "//secure-a.vimeocdn.com/js/froogaloop2.min.js";
