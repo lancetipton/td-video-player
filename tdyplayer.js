@@ -1,279 +1,506 @@
-TDYPlayer = function(){
+	var video_player = function(){
+		var youtubeApiScript = "//www.youtube.com/iframe_api";
+		var youtubeUrl = '//www.youtube.com/embed/';
+		var vimeoApiScript = "//secure-a.vimeocdn.com/js/froogaloop2.min.js";
+		var vimeoUrl = '//player.vimeo.com/video/';
+		var self;
+		var init_cb;
+		var vimeoIsPlaying = false;
+		var vimeoIsFinished = false;
+		// Default Optioins:
+		this.options = {
+				parent: undefined,
+				type: undefined,
+				video_id : undefined,
+				iframe_id: 'video_iframe',
+				frameborder: 0,
+				scrolling: 'no',
+				width: "100%",
+				height: "100%",
+				volume: 0,
+				settings: {
+					autoplay: 0,
+					loop: 0,
+					fullscreen: 1,
+					vq: '720',
+				},
+				events: {
+					ready: undefined,
+					play: undefined,
+					pause: undefined,
+					finish: undefined
+				},
+		}
 
-  this.playerVars =  {};
-  this.doResize = false;
-  this.playlistIds = [];
+		this.init = function(args, cb){
+			// Set reference to our object:
+			self = this;
+			//  Set our final callback
+			init_cb = cb;
+			// Set our video player options:
+			_setupOptions(args.options, _setup)
+		};
 
-  this.init = function(id, args, return_cb){
-    this.return_cb = return_cb;
-    this.setVars(args);
-    this.loadAPI(id);
-    window.onYouTubePlayerAPIReady = this.buildPlayer.bind(this);
-  };
-
-
-  this.loadAPI = function(id){
-    this.playerId = id;
-
-    this.apiScript = document.createElement('script');
-    this.apiScript.src = "http://www.youtube.com/player_api"
-
-    document.body.appendChild(this.apiScript);
-
-    this.apiScript.onerror = handleError.bind(this);
-    // For Browsers except IE
-    this.apiScript.onload = handleLoad.bind(this);
-    // For IE
-    this.apiScript.onreadystatechange = handleReadyStateChange.bind(this);  
-
-  };
-
-
-  var handleLoad = function(){
-    this.loaded.bind(this);
-  };
-
-
-  var handleReadyStateChange = function(){
-      this.state = this.scr.readyState;
-      if (this.state === "complete") {
-          handleLoad();
-      }
-  };
-
-  var handleError = function(){
-        throw "TD Error: Could not load Youtube Api!";
-  };
-
-
-
-  this.loaded = function(loaded, data){
-    if(loaded){
-      if(this.TDLib !== undefined){
-        this.TDLib.pluginLoader.unload();
-
-      }
-      else if (typeof TDPluginLoader !== 'undefined') {
-        TDPluginLoader.unload();
-      }
-    }
-    else{
-      throw data;
-    }
-  };
-
-  this.buildPlayer = function(){
-    this.element = document.getElementById(this.playerId);
-    
-    if(document.getElementById(this.playerId) !== null){
-      this.player = new YT.Player(this.playerId, {
-        height: this.height,
-        width: this.width,
-        videoId: this.videoId,
-        playerVars: this.playerVars,
-        events: {
-          'onReady': this.onPlayerReady.bind(this),
-          'onStateChange': this.onPlayerStateChange.bind(this)
-        }
-      });
-    }
-    else if(this.logErrors){
-      console.log("TD Error: Could not find element to attach the YT Player. Please pass an existing element ID as the first parameter when calling the init function!")
-    }
+		var _setupOptions = function(options, cb){
+			//  Check to make sure a type was passed in:
+			if(!options.type){
+				throw "Your must pass an a video type" 
+			}
+			//  Check for Iframe ID
+			if(!options.iframe_id){
+				throw "Your must pass an iframe_id" 
+			}
+			//  Map our options to defaults:
+			Object.keys(options).forEach(function (key) {
+				self.options[key] =  options[key];
+			});
 
 
+			// If you pass a jquery object for the parent, we get the dom element:
+			if(self.options.parent.length){
+				self.options.parent = self.options.parent[0]
+			}
 
-  };
+			if(typeof cb === "function"){
+				cb();
+			}
+		}
 
-  this.onPlayerReady  = function(){
-    this.element = document.getElementById(this.playerId);
-    if(this.doResize === true){
-      this.resize();
-    }
+		this.isPlaying = function(cb){
+			if(self.options.type === "vimeo"){
+				if(typeof cb === 'function'){ cb(vimeoIsPlaying); } else{ return vimeoIsPlaying; }
+			}
+			else if(self.options.type === "youtube"){
+				var isPlaying;
+				var state = this.player.getPlayerState();
+				if(state === 1){ isPlaying = true; } else{ isPlaying = false; }
+				if(typeof cb === 'function'){ cb(vimeoIsPlaying); } else{ return vimeoIsPlaying; }
+			}
+		}
 
-    if(typeof this.return_cb === 'function'){
-      return this.return_cb(this);
-    }
+		this.isPaused = function(cb){
+			if(self.options.type === "vimeo"){
+				this.player.api('paused', function(paused) {
+					if(typeof cb === 'function'){ cb(paused); } else{ return paused; }
+				});
+			}
+			else if(self.options.type === "youtube"){
+				var isPaused;
+				var state = this.player.getPlayerState();
+				if(state === 2){ isPaused = true; } else{ isPaused = false; }
+				if(typeof cb === 'function'){ cb(paused); } else{ return isPaused; }
+			}
+		}
 
-  };
+		this.isFinished = function(cb){
+			if(self.options.type === "vimeo"){
+				if(typeof cb === 'function'){ cb(vimeoIsFinished); } else{ return vimeoIsFinished; }
+			}
+			else if(self.options.type === "youtube"){
+				var isFinished;
+				var state = this.player.getPlayerState();
+				if(state === 0){ isFinished = true; } else{ isFinished = false; }
+				if(typeof cb === 'function'){ cb(paused); } else{ return isFinished; }
+			}
+		}
 
-  this.onPlayerStateChange = function(){
+		var _setup = function(){
+			// First set up the iframe, then on the call back setup the video based on the type:
+			_setupFrame(function(){
+				if(self.options.type === "vimeo"){
+					self.options['api'] = '1'
+					self.api = vimeoApiScript;
+					self.videoUrl = vimeoUrl;
+					_setupVideo();
+				}
+				else if(self.options.type === "youtube"){
+					self.options['enablejsapi'] = '1'
+					self.api = youtubeApiScript;
+					self.videoUrl = youtubeUrl;
+					_setupVideo();
+				}
+			})
+		}
 
+		var _setupFrame = function(cb){
+			if(self.options.type === "vimeo"){
+				//  Create our iframe element
+				var iframe = document.createElement('iframe');
+				self.iframe = _setIFrameOption(iframe);
+			}
+			// Youtube overwrites the element with an iframe, so we must add a div as the placeholder for the iframe:
+			else if(self.options.type === "youtube"){
+				var iframe_attatch = document.createElement('div');
+				self.iframe = _setIFrameOption(iframe_attatch);
 
-  };
+			}
 
-  this.setVars = function(args){
-    for (var prop in args) {
-        if (args.hasOwnProperty(prop)) {
-            if(prop === "height"){ this.height = args[prop];}
-            else if(prop === "width"){ this.width = args[prop];}
-            else if(prop === "videoId"){ this.videoId = args[prop];}
-            else if(prop === "logErrors"){ this.logErrors = args[prop];}
-            else if(prop === "containerId"){ 
-              this.container = document.getElementById(args[prop]);
-            }
-            else if(prop === "resize"){
-              if(args[prop] === true){
-                this.doResize = true;
-                window.addEventListener('resize', this.resize.bind(this), true);
-              }
-            }
-            else{
-              this.playerVars[prop] = args[prop];
-            }
-        }
-    }
-  };
+			if(self.options.parent !== null){
+				self.options.parent.insertBefore(self.iframe, self.options.parent.firstChild);
+			}
+			else{
+				document.body.appendChild(self.iframe);
+			}
 
+			if(typeof cb === 'function' ){
+				cb();
+			}
+		}
 
-  this.resize = function(cb){
-    
-    if(this.element){
+		var _setIFrameOption = function(iframe){
+			iframe.setAttribute("id", self.options.iframe_id);
+			if(self.options.type === "vimeo"){
+				//  Set our iframe attributes:
+				//  Set our class to be the type of player we are using:
+				iframe.setAttribute("class", self.options.type);
+				//  Set allow fullscreen, no reason to not add it:
+				iframe.setAttribute("webkitallowfullscreen", "");
+				iframe.setAttribute("mozallowfullscreen", "");
+				iframe.setAttribute("allowfullscreen", "");
+				iframe.setAttribute("data-td-video", "");
+				self.options.frameborder ? iframe.setAttribute("frameborder", self.options.frameborder) : iframe.setAttribute("frameborder", '0');
+				self.options.scrolling ? iframe.setAttribute("scrolling", self.options.scrolling) : iframe.setAttribute("scrolling", 'no');
+				self.options.width ? iframe.setAttribute("width", self.options.width) : iframe.setAttribute("width", "100%");
 
-      if(this.container){
-        var width = parseInt(window.getComputedStyle(this.container).width);
-        this.element.height = (width / 2).toString() + "px";
+				if(self.options.height){
+					if(self.options.height === "auto"){
+						var vidHeight = Math.floor( screen.width / (16.0/9.0));
+						iframe.setAttribute("height", vidHeight);
+					}
+					else{
+						iframe.setAttribute("height", self.options.height);
+					}
+				}
+				else{
+					iframe.setAttribute("height", "100%");
+				}
+			}
+			return iframe;
+		}
 
-        this.width = width.toString() + "px";
-        this.height = this.container.height;        
-      }
-
-      var width = parseInt(window.getComputedStyle(this.element).width);
-      this.element.height = (width / 2).toString() + "px";
-
-      this.width = width.toString() + "px";
-      this.height = this.element.height;
-    }
-
-
-    if(typeof cb === 'function'){
-      return cb(this);
-    }
-  }
-
-
-  this.changeVideo = function(args, cb){
-    this.player.loadVideoById({
-      'videoId': args["videoId"],
-      'startSeconds': args["start"],
-      'endSeconds': args["end"],
-      'suggestedQuality': args["quality"]
-    })
-
-    if(typeof cb === 'function'){
-      return cb(this);
-    }
-
-  }
-
-  this.cueVideo = function(args, cb){
-    this.player.cueVideoById({
-      'videoId': args["videoId"],
-      'startSeconds': args["start"],
-      'endSeconds': args["end"],
-      'suggestedQuality': args["quality"]
-    })
-
-    if(typeof cb === 'function'){
-      return cb(this);
-    }
-  }
-
-  this.loadPlaylist = function(args, cb){
-    this.player.loadVideoById({
-      'videoId': args["videoId"],
-      'startSeconds': args["start"],
-      'endSeconds': args["end"],
-      'suggestedQuality': args["quality"]
-    })
-
-    if(typeof cb === 'function'){
-      return cb(this);
-    }
-
-  }
-
-  this.cuePlaylist = function(args, cb){
-    
-    // if(args["videoIds"]){
-    //   this.playlistIds = args["videoIds"];
-    // }
-
-
-    // this.player.cuePlaylist({
-    //   listType: 'playlist',
-    //   list: this.playlistIds,
-    //   index: args["startOn"],
-    //   startSeconds: args["start"],
-    //   suggestedQuality: args["quality"]
-    // })
-
-    // // this.player.playVideo();
-
-    // if(typeof cb === 'function'){
-    //   return cb(this);
-    // }
-  }
-
-
-  this.loadPlaylist = function(args, cb){
-    
-    if(args["videoIds"]){
-      this.playlistIds = args["videoIds"];
-    }
-
-    this.player.loadPlaylist({
-      playlist: this.playlistIds,
-      index: args["startOn"],
-      startSeconds: args["start"],
-      suggestedQuality: args["quality"]
-    })
-
-    if(typeof cb === 'function'){
-      return cb(this);
-    }
-  }
+		var _setupVideo = function(){
+			// Build the Vimeo url:
+			if(self.options.type === "vimeo"){
+				self.iframe.src = _buildURL();
+			}
+			// Add our video script to the dom:
+			_loadScript(self.api, function(status){
+				//  Once the script has been loaded, build the player:
+				if(status){	
+					//  Only call for vimeo, yourutbe will wiat for the event callback:
+					if(self.options.type === "vimeo"){
+						_buildPlayer();						
+					}
+				}
+				else{
+					throw "Could not load Script";
+				}
+			})
+		}
 
 
-  this.addToPlaylist = function(videoId, cb){
-    this.playlistIds.push(videoId)
+		var _buildURL = function(){
+			//  Build the url, must pass in the iframe id, or it will not work!
+			var videoUrl = self.videoUrl + self.options.video_id  + '/?&player_id=' + self.options.iframe_id 
+			//  Map our video options and add them to the url:
+			Object.keys(self.options.settings).forEach(function (key) {
+				videoUrl += '&' + key + '=' + self.options.settings[key];
+			})
+			return videoUrl;
+		}
 
-    if(typeof cb === 'function'){
-      return cb(this);
-    }
-  }
 
-  return this;
+		var _buildPlayer = function(){
+			if(self.options.type === "vimeo"){
+				// build our vimeo player:
+		       	self.player = new $f(self.iframe);
+		       	// Add our event listeners for vimeo:
+		       	_addViemoApiCalls(_addEventListeners);
+		       	finalCallBack();
+			}
+			if(self.options.type === "youtube"){
+				_setupYoutubeOptions(function(options){
+					self.player = new YT.Player(self.options.iframe_id, options);
+					finalCallBack();
+				})
+			}
+			
+		}
 
-}
+		// Event listener functions for Vimeo:
+		function _addEventListeners(){
+       		//  Map our events to the correct listeners:
+			self.player.addEvent('ready', function(){
+				Object.keys(self.options.events).forEach(function (key) {
+					if(key === 'ready'){
+						_readyEventHack.call(self);
+					}
+					else if(key === 'pause'){
+						self.player.addEvent(key, _pauseEventHack.bind(self));
+					}
+					else if(key === 'play'){
 
-/*
+						self.player.addEvent(key, _playEventHack.bind(self));
+					}
+					else if(key === 'finish'){
 
-Youtube Options:
-autohide = "2 / 1 / 0";
-autoplay = "1 / 0";
-cc_load_policy = "1 / 0";
-color = "'red' / 'white'";
-controls = "0 / 1 / 2";
-disablekb = "1 / 0";
-enablejsapi = "0 / 1";
-end = "The parameter value is a positive integer, when player will stop playing a video";
-fs = "1 / 0 - fullscreen";
-hl = "Change lang";
-iv_load_policy
-list
-listType
-loop
-modestbranding
-origin
-playerapiid
-playlist
-playsinline
-rel
-showinfo
-start
-theme
+						self.player.addEvent(key, _finishEventHack.bind(self));
+					}
+					else{
+						self.player.addEvent(key, self.options.events[key].bind(self));
+					}
+				})
+				// Add the playProgress event listener, to set our vimeoIsPlaying var
+				// Vimeo API has no is-playing function or state like youtube
+				self.player.addEvent('playProgress', _isPlayingHack.bind(self));
 
-*/
+			})
+		}
 
+		var _finishEventHack = function(){
+			vimeoIsFinished = true;
+			if(typeof  self.options.events['finish'] === "function"){
+				self.options.events.finish.call(self);
+			}
+		}
+
+		var _isPlayingHack = function(data){
+			if(data.percent === 1){ vimeoIsFinished = true; } else{ vimeoIsFinished = false; }
+			vimeoIsPlaying = true;
+		}
+
+		var _readyEventHack = function(){
+		    self.player.api('setVolume', self.options['volume']);
+			if(typeof  self.options.events['ready'] === "function"){
+				self.options.events.ready.call(self);
+			}
+		}
+
+		//  Hack functions that will run our eventHandler function only once:
+		var _playEventHack = function(){
+			vimeoIsPlaying = true;
+			if(typeof  self.options.events['play'] === "function"){
+				self.options.events.play.call(self);
+			}
+		}
+
+		//  Hack functions that will run our eventHandler function only once:
+		var _pauseEventHack = function(){
+			vimeoIsPlaying = false;
+			if(typeof  self.options.events['pause'] === "function"){
+				self.options.events.pause.call(self);
+			}
+		}
+
+
+		window.onYouTubeIframeAPIReady = _buildPlayer.bind(self);
+
+		var _onPlayerReady = function(event){
+			self.iframe = self.player.a;
+			self.iframe.setAttribute("data-td-video", "");
+			self.player.setVolume(self.options['volume']);
+			if(typeof  self.options.events['ready'] === "function"){
+		 		self.options.events['ready'].call(self, event);
+			}
+		}
+
+	     var finalCallBack = function(){
+			// If we passed a call back function, call it and return the player:
+			if(typeof init_cb === 'function' ){
+				self.debounce = _debounce;
+				init_cb(self)
+				init_cb = undefined;
+			}
+	     }
+
+		var _setupYoutubeOptions = function(cb){
+			var ytOptions = { playerVars: {}};
+			Object.keys(self.options).forEach(function (key) {
+				if(key === 'settings'){
+					Object.keys(self.options['settings']).forEach(function (s_key) {
+						if(s_key === 'fullscreen'){
+							ytOptions.playerVars['allowfullscreen'] = self.options['settings'][s_key]
+						}
+						else if(s_key === 'loop' && self.options['settings']['loop'] === 1){
+							if(self.options['settings']['playlist'] === undefined){
+								ytOptions.playerVars['playlist'] = self.options['video_id'];
+							}
+							ytOptions.playerVars[s_key] = self.options['settings'][s_key]
+						}
+						else{
+							ytOptions.playerVars[s_key] = self.options['settings'][s_key]
+						}
+					})
+				}
+				else if(key !== 'events' && key !== 'parent' && key != 'video_id' && key != 'height' && key != 'width'){
+					ytOptions.playerVars[key] = self.options[key];
+				}
+				else if(key !== 'events' && key !== 'parent'){
+					if(key === "video_id"){
+						ytOptions['videoId'] = self.options[key]
+					}
+					else{
+						ytOptions[key] = self.options[key]
+					}
+				}
+			})
+			if(self.options.height){
+				if(self.options.height === "auto"){
+					var vidHeight = Math.floor( screen.width / (16.0/9.0));
+					ytOptions["height"] = vidHeight;
+				}
+				else{
+					ytOptions["height"] = self.options.height;
+				}
+			}
+			else{
+				ytOptions["height"] = "100%";
+			}
+
+			ytOptions['events'] = {
+				'onReady':_onPlayerReady.bind(self),
+				'onStateChange' : _onPlayerStateChange.bind(self.player)
+			}
+			if(typeof cb === "function"){
+				cb(ytOptions);
+			}
+			else{
+				return ytOptions;
+			}
+		}
+
+		var _onPlayerStateChange = function(event) {
+			if(event.data == "1") {
+				if(typeof  self.options.events['play'] === "function"){
+					self.options.events['play'].call(self);
+				}
+			}
+			else if(event.data == "2") {
+				if(typeof  self.options.events['pause'] === "function"){
+					self.options.events['pause'].call(self);
+				}
+			 }
+			else if(event.data == "0") {
+				if(typeof  self.options.events['finish'] === "function"){
+					self.options.events['finish'].call(self);
+				}
+			}
+		}
+
+		var _addViemoApiCalls = function(cb){
+	       	self.player.playVideo = function(){
+	       		self.player.api("play");
+	       	}
+	       	self.player.setVolume = function(volume){
+	       		self.player.api('setVolume', volume);
+	       	}
+	       	self.player.pauseVideo = function(volume){
+	       		self.player.api("pause");
+	       	}
+	       	self.player.mute = function(){
+	       		self.player.api('setVolume', 0);
+	       	}
+	       	self.player.stopVideo = function(){
+	       		self.player.api('pause');
+	       	}
+
+	       	if(typeof cb === "function"){
+	       		cb.call(this);
+	       	}
+
+		}
+
+		//  Helper function to load in our player scripts:
+		function _loadScript(path, cb) {
+			var loaded = false;
+			// Check if script has already loaded, and if so don't load the script again:
+			if(self.options.type === "youtube"){
+				 if(window.YT !== undefined && window.YT.loaded){
+				 	loaded = true;
+					window.onYouTubeIframeAPIReady.call(self);
+				 }
+			}
+			else if(self.options.type === "vimeo"){
+
+				if(window.$f !== undefined){
+					loaded = true;
+					_buildPlayer.call(self);
+				}
+			}
+			if(!loaded){
+			    var done = false;
+			    var scr = document.createElement('script');
+			    scr.onload = handleLoad;
+			    scr.onreadystatechange = handleReadyStateChange;
+			    scr.onerror = handleError;
+			    isIE(function(ie){
+			    	if(ie){
+				    	scr.src = window.location.protocol + path;
+				    }
+				    else{
+				    	scr.src = path;
+				    }
+			    })
+
+				if(self.options.parent !== null){
+					self.options.parent.appendChild(scr);
+				}
+				else{
+					 document.body.appendChild(scr);
+				}
+			}
+
+		    function handleLoad() {
+		        if (!done) {
+		            done = true;
+		            cb(done);
+		        }
+		    }
+
+		    function handleReadyStateChange() {
+		        var state;
+		        if (!done) {
+		            state = scr.readyState;
+		            if (state === "complete") {
+		                handleLoad();
+		            }
+		        }
+		    }
+		    function handleError() {
+		        if (!done) {
+		            done = true;
+		            cb(false);
+		        }
+		    }
+		}
+	
+		// Helper function for slowing down constant dom calls ie - window.resize:
+		var _debounce = function(func, wait, immediate) {
+			var timeout;
+			return function() {
+				var context = this, args = arguments;
+				var later = function() {
+					timeout = null;
+					if (!immediate) func.apply(context, args);
+				};
+				var callNow = immediate && !timeout;
+				clearTimeout(timeout);
+				timeout = setTimeout(later, wait);
+				if (callNow) func.apply(context, args);
+			};
+		};
+
+		function isIE(cb) {
+		  var sAgent = window.navigator.userAgent;
+		  var Idx = sAgent.indexOf("MSIE");
+		  var _isIE = false;
+		  // If IE, return version number.
+		  if (Idx > 0 || !!navigator.userAgent.match(/Trident\/7\./)){
+		    _isIE = true;
+		  }
+		  if(typeof cb === "function"){
+		  	cb(_isIE)
+		  }
+		}
+	}
 
