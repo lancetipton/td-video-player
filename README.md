@@ -1,57 +1,152 @@
 
-# TD YouTube player library:
-
-### About
-I have been creating a number of simple and pure JavaScript plugins. They are a work in-progress as is this readme. They will be updated periodically as I make changes to them, and optimize them. As of now they are nothing facy, but they get the job done. They are straight and to the point, and because of that they are pretty lightweight. Please feel free to use them all you want. Branch them, make changes, whatever you feel like doing.
-
-I know there are plenty of great plugins out there that already do the same things. I have used them often, and they make life as a programmer better. The point is not to write a better plugin, but more to go through the process of building a library to understand how it’s done and what it requires. It is a great learning experience, and I encourage anyone who has never done it, to do so. 
+# TD Video player library:
 
 
 ### To use:
-First create a new TDYPlayer object. Then call the init function and pass in the id of the element you want the YouTube player attatched to, as well as an object that contains the youtube player settings.
+Simple:
+```
+HTML:
+<div class="video-slide-container"   id="video_player-{{videoid}}" data-video-player  data-video-type="{{youtube|vimeo}}" data-video-id="{{videoid}}"  ></div>
+
+JS:
+// Get the Wrapper:
+vidWrapper = $("[data-video-player]");
+
+// Get the data:
+var videoId = vidWrapper.attr("data-video-id");
+var videoType =  vidWrapper.attr("data-video-type");
+
+// Create an new video player:
+new vp().init();
+```
+The init function takes two arguments, an object that holds an options object, and a callback funtion when the video player has been built. Here is an example of how it works:
+Notice: { options: { ...put options here... } }
+
+```
+HTML:
+<div class="video-slide-container"   id="video_player-{{videoid}}" data-video-player  data-video-type="{{youtube|vimeo}}" data-video-id="{{videoid}}"  ></div>
+
+JS:
+// Get the Wrapper:
+vidWrapper = $("[data-video-player]");
+
+// Get the data:
+var videoId = vidWrapper.attr("data-video-id");
+var videoType =  vidWrapper.attr("data-video-type");
+
+// Create an new video player:
+new vp().init({
+	options: {
+		parent: vidWrapper, 
+		type: videoType,
+		video_id : videoId,
+		iframe_id: 'video-iframe-' + videoId,
+		frameborder: 0,
+		scrolling: 'no',
+		width: "100%",
+		height: "auto",
+		volume: volume,
+		settings: {
+			autoplay: autoplay,
+			loop: 1,
+			fullscreen: 1,
+			controls : 0,
+			modestbranding : 1,
+			vq: '720',
+		      	rel: 0,
+		      	showinfo : 0,
+		      	wmode: "transparent",
+		},
+		// Callback functions
+		events: {
+			ready: onReady,
+			play: onPlay,
+			pause: onPause,
+			finish: onFinish,
+		},
+	}
+}, onPlayerInit)
+
+
+// Main callback after player init:
+function onPlayerInit(_videoPlayer){
+
+}
+
+```
+When you create a new player and call init you can pass in options object. For settings see above code. You can also pass in an events object inside of the options object.
+Ex: var options = { events: {} };
+new vp().init({options: options});
+
+Inside of the events object you can put event to listen for change to the video player. It would look something like this:
+Ex: 
+
+```
+var options = { 
+	events: {
+		ready: onReady,
+		play: onPlay,
+		pause: onPause,
+		finish: onFinish,
+	},
+};
+
+new vp().init({options: options});
+
+// When player is ready callback:
+function onReady(){
+	// do stuff
+
+	// These callbacks are bound to the video player, so (this === current video player)
+	// var videoPlayer = this;
+	// videoplayer.player.playVideo();
+	// or
+	// this.player.playVideo();
+}
+
+// Call onPlay Callback function:
+function onPlay(){
+	// do stuff
+}
+
+function onPause(){
+// do stuff
+}
+function onFinish(){
+// do stuff
+}
+
+
+```
+### List of Options defaults:
+```
+options = {
+	parent: undefined,
+	type: undefined,
+	video_id : undefined,
+	iframe_id: 'video_iframe',
+	frameborder: 0,
+	scrolling: 'no',
+	width: "100%",
+	height: "100%",
+	volume: 0,
+	settings: {
+		autoplay: 0,
+		loop: 0,
+		fullscreen: 1,
+		vq: '720',
+	},
+	events: {
+		ready: undefined,
+		play: undefined,
+		pause: undefined,
+		finish: undefined
+	},
+}
+
 
 ```
 
-var ytPlayer = new TDYPlayer();
-ytPlayer.init("yt-player", {
-	height: "390",
-	width: "640",
-	videoId: "wipvcsYMtcs",
-	autohide: 1,
-	autoplay: 0
-});	
-
-```
-
-If resizeHeight is passed as true, it adds a listener to the window to adjust the height relative to the width of the player as the screen gets bigger or smaller.
-
-Change Player video (Autoplays the video once loaded):
-
-```
-
-ytPlayer.changeVideo({
-	videoId: 'bHQqvYy5KYo',
-	start: 5,
-	end: 60,
-	quality: 'large'
-});
-
-```
-
-Cue Player video (Will not autoplay the video when loaded):
-
-```
-
-ytPlayer.queVideo({
-	videoId: 'bHQqvYy5KYo',
-	start: 5,
-	end: 60,
-	quality: 'large'
-});
-
-```
-
-### Will add more info soon
-
+### That's it.
 
 
